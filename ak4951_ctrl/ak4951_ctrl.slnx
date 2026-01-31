@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="ak4951_ctrl/ak4951_ctrl.vcxproj" Id="d5e4abb8-eea1-4034-b648-bd55886ffd2e" />
+</Solution>
