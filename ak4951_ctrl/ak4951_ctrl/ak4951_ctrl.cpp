@@ -73,9 +73,10 @@ int APIENTRY WinMain
     bool loopback_prev = false;
     bool link_att = false;
     bool link_att_prev = false;
+    int alc_mode_prev = 0;
     int alc_ref_level_prev = 0;
-    int mic_gain_prev = 18;
-    int sp_enable_prev = 0x80;  // 0x80 is for initialize
+    int mic_gain_prev = 0;
+    int sp_enable_prev = 0;
 
     WSAData wsaData;
     int error = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -170,21 +171,39 @@ int APIENTRY WinMain
         if (connect) {
             ImGui::Begin("Digital ALC");
             if (ImGui::RadioButton("OFF", &alc_mode, ALC_MODE_OFF)) {
-                alc_off();
-                loopback = link_att = false;
+//                alc_off();
+//                loopback = link_att = false;
             }
             ImGui::SameLine();
 
             if (ImGui::RadioButton("RX", &alc_mode, ALC_MODE_RX)) {
-                alc_on_rx(alc_ref_level);
-                alc_ref_level_prev = alc_ref_level;
-                loopback = link_att = false;
+//                alc_on_rx(alc_ref_level);
+//                alc_ref_level_prev = alc_ref_level;
+//                loopback = link_att = false;
             }
             ImGui::SameLine();
 
             if (ImGui::RadioButton("TX", &alc_mode, ALC_MODE_TX)) {
-                alc_on_tx(alc_ref_level);
-                alc_ref_level_prev = alc_ref_level;
+//                alc_on_tx(alc_ref_level);
+//                alc_ref_level_prev = alc_ref_level;
+//                loopback = link_att = false;
+            }
+
+            if (alc_mode != alc_mode_prev) {
+                alc_mode_prev = alc_mode;
+                switch (alc_mode) {
+                case ALC_MODE_RX:
+                    alc_on_rx(alc_ref_level);
+                    alc_ref_level_prev = alc_ref_level;
+                    break;
+                case ALC_MODE_TX:
+                    alc_on_tx(alc_ref_level);
+                    alc_ref_level_prev = alc_ref_level;
+                    break;
+                default:
+                    alc_off();
+                    break;
+                }
                 loopback = link_att = false;
             }
 
