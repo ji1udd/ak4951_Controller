@@ -24,6 +24,8 @@ char    IPadr[IPSIZE] = "192.168.0.10";
 #define REF_MIN         0   // dB
 #define REF_MAX         30  // dB
 
+#define EQ_NUM          5
+
 unsigned char rxdata[DATA_LENGTH];
 unsigned char txdata[DATA_LENGTH] = {
         0xef, 0xfe, 0x05, 0x7f, 0x78, 0x06, 0x92, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
@@ -40,6 +42,24 @@ unsigned char reqdata[DATA_LENGTH] = {
 struct sockaddr_in addr;
 SOCKET sock;
 
+typedef struct {
+    bool enable, enable_prev;
+    int fo, fo_prev;
+    int fb, fb_prev;
+    float k, k_prev;
+    const unsigned char EA_addr;
+    const unsigned char EB_addr;
+    const unsigned char EC_addr;
+} eq_item;
+
+static eq_item eq[EQ_NUM] = {
+    { false, false,  200,  200,  100,  100, 0.0f, 0.0f, 0x32, 0x34, 0x36},
+    { false, false,  400,  400,  150,  150, 0.0f, 0.0f, 0x38, 0x3a, 0x3c},
+    { false, false,  800,  800,  300,  300, 0.0f, 0.0f, 0x3e, 0x40, 0x42},
+    { false, false, 1600, 1600,  600,  600, 0.0f, 0.0f, 0x44, 0x46, 0x48},
+    { false, false, 3200, 3200, 1200, 1200, 0.0f, 0.0f, 0x4a, 0x4c, 0x4e}
+};
+
 static int alc_mode = ALC_MODE_OFF;
 static int alc_ref_level = 0;
 static int mic_gain = 18;
@@ -53,9 +73,11 @@ void set_ref(int level);
 void alc_on_rx(int level);
 void alc_on_tx(int level);
 void alc_off(void);
+void set_eq(unsigned int ch);
 
 bool save_setting_items(void);
 bool load_setting_items(void);
+
 
 int APIENTRY WinMain
 (_In_        HINSTANCE   hInstance
@@ -63,7 +85,6 @@ int APIENTRY WinMain
     , _In_        LPSTR       lpCmdLin
     , _In_        int         nCmdShow
 )
-
 //int main()
 {
     load_setting_items();
@@ -97,7 +118,7 @@ int APIENTRY WinMain
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
-    GLFWwindow* window = glfwCreateWindow(320, 256, "AK4951 Controller (JI1UDD)", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(320, 424, "AK4951 Controller (JI1UDD)", NULL, NULL);
 
     if (!window) {
         glfwTerminate();
@@ -170,24 +191,9 @@ int APIENTRY WinMain
 
         if (connect) {
             ImGui::Begin("Digital ALC");
-            if (ImGui::RadioButton("OFF", &alc_mode, ALC_MODE_OFF)) {
-//                alc_off();
-//                loopback = link_att = false;
-            }
-            ImGui::SameLine();
-
-            if (ImGui::RadioButton("RX", &alc_mode, ALC_MODE_RX)) {
-//                alc_on_rx(alc_ref_level);
-//                alc_ref_level_prev = alc_ref_level;
-//                loopback = link_att = false;
-            }
-            ImGui::SameLine();
-
-            if (ImGui::RadioButton("TX", &alc_mode, ALC_MODE_TX)) {
-//                alc_on_tx(alc_ref_level);
-//                alc_ref_level_prev = alc_ref_level;
-//                loopback = link_att = false;
-            }
+            ImGui::RadioButton("OFF", &alc_mode, ALC_MODE_OFF); ImGui::SameLine();
+            ImGui::RadioButton("RX", &alc_mode, ALC_MODE_RX); ImGui::SameLine();
+            ImGui::RadioButton("TX", &alc_mode, ALC_MODE_TX);
 
             if (alc_mode != alc_mode_prev) {
                 alc_mode_prev = alc_mode;
@@ -226,7 +232,7 @@ int APIENTRY WinMain
         }
 
         if (connect && (alc_mode != ALC_MODE_OFF)) {
-            ImGui::Begin("Mic AMP analog gain");
+            ImGui::Begin("Mic AMP Analog Gain");
             ImGui::SetNextItemWidth(190.0f);
             ImGui::SliderInt("GAIN (dB)", &mic_gain, 0, 30);
             mic_gain = (mic_gain / 3) * 3;
@@ -243,8 +249,6 @@ int APIENTRY WinMain
             if (loopback) {
                 ImGui::Checkbox("Link-DAC-ATT", &link_att);
             }
-
-            ImGui::End();
 
             if (mic_gain != mic_gain_prev) {
                 mic_gain_prev = mic_gain;
@@ -275,7 +279,63 @@ int APIENTRY WinMain
                 }
             }
 
+            ImGui::End();
         }
+
+        if (connect) {
+
+            char name[48];
+            switch (alc_mode) {
+                case ALC_MODE_RX:
+                    strcpy_s(name, sizeof(name), "5-Band Parametric Equalizer [ RX ]");
+                    break;
+                default:
+                    strcpy_s(name, sizeof(name), "5-Band Parametric Equalizer [ TX ]");
+            }
+
+            ImGui::Begin(name);
+            ImGui::Text("    ENB  Center(Hz)  Width(Hz)   K(Gain)");
+            ImGui::PushItemWidth(72.0f);
+
+            ImGui::Text("EQ1"); ImGui::SameLine();
+            ImGui::Checkbox("##EQ1 ENB", &eq[0].enable); ImGui::SameLine();
+            ImGui::SliderInt("##EQ1 fo", &eq[0].fo, 150, 10000); ImGui::SameLine();
+            ImGui::SliderInt("##EQ1 fb", &eq[0].fb, 50, 5000); ImGui::SameLine();
+            ImGui::SliderFloat("##EQ1 K", &eq[0].k, -1.0f, 2.999f, "%.1f");
+
+            ImGui::Text("EQ2"); ImGui::SameLine();
+            ImGui::Checkbox("##EQ2 ENB", &eq[1].enable); ImGui::SameLine();
+            ImGui::SliderInt("##EQ2 fo", &eq[1].fo, 150, 10000); ImGui::SameLine();
+            ImGui::SliderInt("##EQ2 fb", &eq[1].fb, 50, 5000); ImGui::SameLine();
+            ImGui::SliderFloat("##EQ2 K", &eq[1].k, -1.0f, 2.999f, "%.1f");
+
+            ImGui::Text("EQ3"); ImGui::SameLine();
+            ImGui::Checkbox("##EQ3 ENB", &eq[2].enable); ImGui::SameLine();
+            ImGui::SliderInt("##EQ3 fo", &eq[2].fo, 150, 10000); ImGui::SameLine();
+            ImGui::SliderInt("##EQ3 fb", &eq[2].fb, 50, 5000); ImGui::SameLine();
+            ImGui::SliderFloat("##EQ3 K", &eq[2].k, -1.0f, 2.999f, "%.1f");
+
+            ImGui::Text("EQ4"); ImGui::SameLine();
+            ImGui::Checkbox("##EQ4 ENB", &eq[3].enable); ImGui::SameLine();
+            ImGui::SliderInt("##EQ4 fo", &eq[3].fo, 150, 10000); ImGui::SameLine();
+            ImGui::SliderInt("##EQ4 fb", &eq[3].fb, 50, 5000); ImGui::SameLine();
+            ImGui::SliderFloat("##EQ4 K", &eq[3].k, -1.0f, 2.999f, "%.1f");
+
+            ImGui::Text("EQ5"); ImGui::SameLine();
+            ImGui::Checkbox("##EQ5 ENB", &eq[4].enable); ImGui::SameLine();
+            ImGui::SliderInt("##EQ5 fo", &eq[4].fo, 150, 10000); ImGui::SameLine();
+            ImGui::SliderInt("##EQ5 fb", &eq[4].fb, 50, 5000); ImGui::SameLine();
+            ImGui::SliderFloat("##EQ5 K", &eq[4].k, -1.0f, 2.999f, "%.1f");
+            ImGui::Text("                               -1 < K < 3");
+            ImGui::PopItemWidth();
+
+            for (unsigned int ch = 0; ch < EQ_NUM; ch++) {
+                set_eq(ch);
+            }
+
+            ImGui::End();
+        }
+
 
         // Rendering
         ImGui::Render();
@@ -387,6 +447,60 @@ void alc_off(void) {
 }
 
 
+void set_eq(unsigned int ch) {
+    if ((ch >= 0) && (ch < EQ_NUM)) {
+
+        int fo = eq[ch].fo;
+        int fb = eq[ch].fb;
+        float k = eq[ch].k;
+
+        if ((eq[ch].enable != eq[ch].enable_prev) || (fo != eq[ch].fo_prev) || (fb != eq[ch].fb_prev) || (k != eq[ch].k_prev)) {
+
+            eq[ch].enable_prev = eq[ch].enable;
+            eq[ch].fo_prev = fo;
+            eq[ch].fb_prev = fb;
+            eq[ch].k_prev = k;
+
+            unsigned char dis = 0;
+            unsigned char enb = 0;
+            for (int i = EQ_NUM - 1; i >= 0; i--) {
+                dis <<= 1;
+                enb <<= 1;
+                if (eq[i].enable) {
+                    enb |= 0x01;
+                    if (i != ch) dis |= 0x01;
+                }
+            }
+
+            // disable EQ
+            write_ak4951(0x30, dis);   // disable EQ(ch)
+
+            // calcurate
+            const float pi = 3.1415926f;
+            const float fs = 48000.0f;
+            float x = cosf(2.0f * pi * (float)fo / fs);
+            float y = tanf(pi * (float)fb / fs);
+            float z = 1.0f + y;
+
+            int16_t a = (int16_t)(8192.0f * k * y / z + 0.5f);
+            int16_t b = (int16_t)(8192.0f * x * 2.0f / z + 0.5f);
+            int16_t c = (int16_t)(8192.0f * (y - 1.0f) / z + 0.5f);
+
+            // set EQ coefficients
+            write_ak4951(eq[ch].EA_addr, a & 0xFF);            // Coeff0 ; ExA (LSB)
+            write_ak4951(eq[ch].EA_addr + 1, (a >> 8) & 0xFF); // Coeff1 ; ExA (MSB)
+            write_ak4951(eq[ch].EB_addr, b & 0xFF);            // Coeff2 ; ExB (LSB)
+            write_ak4951(eq[ch].EB_addr + 1, (b >> 8) & 0xFF); // Coeff3 ; ExB (MSB)
+            write_ak4951(eq[ch].EC_addr, c & 0xFF);            // Coeff4 ; ExC (LSB)
+            write_ak4951(eq[ch].EC_addr + 1, (c >> 8) & 0xFF); // Coeff5 ; ExC (MSB)
+
+            // enable EQ
+            write_ak4951(0x30, enb);   // enable EQ(ch)
+        }
+    }
+}
+
+
 bool save_setting_items(void) {
     FILE* fp;
     errno_t errorCode;
@@ -402,6 +516,13 @@ bool save_setting_items(void) {
     fprintf_s(fp, "%d\n", alc_ref_level);
     fprintf_s(fp, "%d\n", mic_gain);
     fprintf_s(fp, "%d\n", sp_enable);
+
+    for (unsigned int ch = 0; ch < EQ_NUM; ch++) {
+        fprintf_s(fp, "%d\n", eq[ch].enable);
+        fprintf_s(fp, "%d\n", eq[ch].fo);
+        fprintf_s(fp, "%d\n", eq[ch].fb);
+        fprintf_s(fp, "%f\n", eq[ch].k);
+    }
 
     fclose(fp);
     printf("Save setting is completed");
@@ -424,6 +545,14 @@ bool load_setting_items(void) {
     fscanf_s(fp, "%d", &alc_ref_level);
     fscanf_s(fp, "%d", &mic_gain);
     fscanf_s(fp, "%d", &sp_enable);
+
+    int tmp;
+    for (unsigned int ch = 0; ch < EQ_NUM; ch++) {
+        fscanf_s(fp, "%d", &tmp); eq[ch].enable = (bool)tmp;
+        fscanf_s(fp, "%d", &eq[ch].fo);
+        fscanf_s(fp, "%d", &eq[ch].fb);
+        fscanf_s(fp, "%f", &eq[ch].k);
+    }
 
     fclose(fp);
     printf("Load setting is completed");

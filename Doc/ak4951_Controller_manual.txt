@@ -16,7 +16,10 @@
     3. Adjust volume slider on Thetis to your desired volume.
     4. Increase "REF LEVEL" to the point where the volume you monitor begins to drop.
 
-       The above settings will help avoid excessively loud receiver audio.
+    The above settings will help avoid excessively loud receiver audio.
+
+    5-Band Parametric Equalizer can be used on the receiver audio.
+    Mic gain can be set from 0 dB to 30 dB.
 
 
   Case 2: Mic audio limitter with gain
@@ -39,6 +42,14 @@
     7. If necessary, uncheck link-DAC-ATT checkbox to check the audio that is sent to Thetis.
     8. At last, uncheck loopback checkbox.
 
+    5-Band Parametric Equalizer can be used on the audio from Mic.
 
 
- January 31, 2026  JI1UDD
+  Case 3: limitter OFF
+  --------------------
+    Mic gain (Boost) is set on SDR software (Thetis,..).
+    5-Band Parametric Equalizer can be used on the audio from Mic.
+
+
+
+ March 3, 2026  JI1UDD
