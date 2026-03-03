@@ -1,9 +1,7 @@
 # ak4951_Controller
 Windows application software for configuring the AK4951 on the Hermes Lite2 companion board via network. 
 
-<img src="Doc/ak4951_ctrl_off.jpg" width="272px">
 <img src="Doc/ak4951_ctrl_rx.jpg" width="272px">
-<img src="Doc/ak4951_ctrl_tx_normal.jpg" width="272px"> 
 
 ## Start Up
   Set your HL2+ IP address to text box and then click "SET" botton.
