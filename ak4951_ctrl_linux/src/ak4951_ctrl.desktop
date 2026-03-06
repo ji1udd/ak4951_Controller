@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.3
+Type=Application
+Terminal=false
+Name[eb_GB]=ak4951_ctrl
+Exec=ak4951_ctrl
+Icon=/usr/share/ak4951_ctrl/ak4951_ctrl_icon160.png
+Name=ak4951_ctrl
+
