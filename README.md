@@ -1,5 +1,5 @@
 # ak4951_Controller
-Windows application software for configuring the AK4951 on the Hermes Lite2 companion board via network. 
+Windows/Linux application software for configuring the AK4951 on the Hermes Lite2 companion board via network. 
 
 <img src="Doc/ak4951_ctrl_rx.jpg" width="272px">
 
@@ -42,4 +42,21 @@ Windows application software for configuring the AK4951 on the Hermes Lite2 comp
 ### AK4951 audio data path
 <img src="Doc/ak4951_Controller_ALC_path.jpg">
 
-March 3, 2026  JI1UDD
+### Installation for Linux (Ubuntu 24.04.4 LTS)
+```
+cd ~
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt-get install libglfw3 libglfw3-dev xorg xorg-dev
+sudo apt-get install gcc g++
+sudo apt-get install git
+sudo apt install make
+git clone https://github.com/ji1udd/ak4951_Controller.git
+cd ak4951_Controller/ak4951_ctrl_linux/src
+make
+sudo make install
+make install_setting
+```
+<img src="Doc/ak4951_ctrl_linux.jpg"> 
+   
+March 22, 2026  JI1UDD

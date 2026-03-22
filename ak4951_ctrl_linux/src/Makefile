@@ -72,7 +72,7 @@ clean:
 install:
 	cp -f $(EXE) /usr/local/bin
 	if [ ! -d /usr/share/ak4951_ctrl ]; then mkdir /usr/share/ak4951_ctrl; fi
-	cp ak4951_ctrl_icon128.png /usr/share/ak4951_ctrl
+	cp ak4951_ctrl_icon160.png /usr/share/ak4951_ctrl
 	cp ak4951_ctrl.desktop /usr/share/applications
 
 install_setting:
